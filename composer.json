@@ -1,0 +1,26 @@
+{
+    "name": "yuxiaobo/simple-excel",
+    "description": "简单的 excel 导入导出工具包",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Yuxiaobo\\SimpleExcel\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "余小波",
+            "email": "yuxiaobo64@gmail.com"
+        }
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.23"
+    },
+    "scripts": {
+        "test": "./vendor/bin/phpunit --bootstrap vendor/autoload.php tests"
+    }
+}
