@@ -93,8 +93,8 @@ class SimpleExcel
     /**
      * 导出数据
      *
-     * @param string $fileName 文件名，例如：/tmp/test.xlsx
-     * @param string $fileType 文件类型，支持xls、xlsx、csv、php://output (直接浏览器输出下载)
+     * @param string $fileName 文件名，例如：/tmp/test.xlsx 或 php://output (直接浏览器输出下载，前提先使用 setDownloadHeader 方法设置下载头)
+     * @param string $fileType 文件类型，支持xls、xlsx、csv
      * @param array $headerColumn 表头信息，key为字段，value为excel表头， 如： ['name' => '姓名', 'age' => '年龄']
      * @param array $exportData 导出数据，二维数组，如：[['name' => '张三', 'age' => 18], ['name' => '李四', 'age' => 19]]
      * @param string $headerColor 表头字体颜色，如 #333333
@@ -169,20 +169,26 @@ class SimpleExcel
         // 设置文件类型
         if ($fileType === 'xls') {
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet);
-            $writer->save($fileName);
         } else if ($fileType === 'xlsx') {
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            $writer->save($fileName);
         } else if ($fileType === 'csv') {
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Csv($spreadsheet);
-            $writer->save($fileName);
-        } else if ($fileType === 'php://output') { // 直接输出下载
-            ob_end_clean(); // 这一步非常关键，用来清除缓冲区防止导出的excel乱码
-            header('pragma:public');
-            header('Content-type:application/vnd.ms-excel;charset=utf-8;');
-            header("Content-Disposition:attachment;filename=$fileName");
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            $writer->save('php://output');
         }
+        $writer->save($fileName);
+    }
+
+
+    /**
+     * 设置下载头
+     *
+     * @param string $filename 文件名，例如：导出数据.xlsx
+     * 先设置下载头， 然后再调用export方法，输出文件路径为 php://output
+     */
+    public static function setDownloadHeader(string $filename = '导出数据.xlsx')
+    {
+        ob_end_clean(); // 这一步非常关键，用来清除缓冲区防止导出的excel乱码
+        header('pragma:public');
+        header('Content-type:application/vnd.ms-excel;charset=utf-8;');
+        header("Content-Disposition:attachment;filename=$filename");
     }
 }
