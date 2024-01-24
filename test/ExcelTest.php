@@ -3,7 +3,7 @@
 namespace simpleExcel\test;
 
 use PHPUnit\Framework\TestCase;
-use Yuxiaobo\Library\SimpleExcel;
+use yuxiaobo\library\SimpleExcel;
 
 class ExcelTest extends TestCase
 {
