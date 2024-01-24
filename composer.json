@@ -5,7 +5,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Yuxiaobo\\SimpleExcel\\": "src/"
+            "yuxiaobo\\library\\": "src/"
         }
     },
     "authors": [
