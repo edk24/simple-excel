@@ -1,0 +1,36 @@
+name: Tester
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  PHPUnit:
+    name: ${{ matrix.os }}-php${{ matrix.php-version }}-${{ matrix.framework }}
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ ubuntu-latest ]
+        framework:
+          - default
+        php-version:
+          - 7.4
+          - 8.0
+          - 8.1
+          - 8.2
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: openssl
+          coverage: none
+      - name: No Framework
+        if: matrix.framework == 'default'
+        run: composer require hyperf/pimple
+      - name: Run PHPUnit
+        run: composer test

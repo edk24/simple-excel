@@ -3,6 +3,13 @@
     "description": "简单的 excel 导入导出工具包",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "excel",
+        "import",
+        "export",
+        "xlsx",
+        "phpspreadsheet"
+    ],
     "autoload": {
         "psr-4": {
             "yuxiaobo\\library\\": "src"
