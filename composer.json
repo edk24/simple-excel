@@ -5,7 +5,12 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "yuxiaobo\\library\\": "src/"
+            "yuxiaobo\\library\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "yuxiaobo\\library\\test\\": "test"
         }
     },
     "authors": [
@@ -22,6 +27,6 @@
         "phpoffice/phpspreadsheet": "^1.23"
     },
     "scripts": {
-        "test": "./vendor/bin/phpunit test/ExcelTest.php"
+        "test": "./vendor/bin/phpunit -c phpunit.xml --colors=always"
     }
 }

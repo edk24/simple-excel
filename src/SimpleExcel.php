@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace yuxiaobo\library;
 
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;

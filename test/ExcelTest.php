@@ -2,10 +2,8 @@
 
 namespace simpleExcel\test;
 
-require_once dirname(__DIR__) . '/src/SimpleExcel.php';
-
 use PHPUnit\Framework\TestCase;
-use yuxiaobo\library\SimpleExcel;
+use Yuxiaobo\Library\SimpleExcel;
 
 class ExcelTest extends TestCase
 {
