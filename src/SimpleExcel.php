@@ -18,12 +18,27 @@ use RuntimeException;
  */
 class SimpleExcel
 {
+    /**
+     * 文件类型：xlsx
+     */
+    const FILE_XLSX = 'xslx';
+
+    /**
+     * 文件类型：xls
+     */
+    const FILE_XLS = 'xls';
+
+    /**
+     * 文件类型：csv
+     */
+    const FILE_CSV = 'csv';
+
 
     /**
      * 导入数据
      *
      * @param string $filePath 文件所在路径， 例如：/tmp/test.xlsx
-     * @param string $fileType 文件类型，支持xls、xlsx、csv
+     * @param string $fileType 文件类型，支持xls、xlsx、csv 参考 SimpleExcel::FILE_
      * @param array $fieldArr 关联数组，key为excel表头，value为数据库字段， 如： ['姓名' => 'name', '年龄' => 'age']
      * @return array
      * @throws RuntimeException
@@ -96,7 +111,7 @@ class SimpleExcel
      * 导出数据
      *
      * @param string $fileName 文件名，例如：/tmp/test.xlsx 或 php://output (直接浏览器输出下载，前提先使用 setDownloadHeader 方法设置下载头)
-     * @param string $fileType 文件类型，支持xls、xlsx、csv
+     * @param string $fileType 文件类型，支持xls、xlsx、csv 参考 SimpleExcel::FILE_
      * @param array $headerColumn 表头信息，key为字段，value为excel表头， 如： ['name' => '姓名', 'age' => '年龄']
      * @param array $exportData 导出数据，二维数组，如：[['name' => '张三', 'age' => 18], ['name' => '李四', 'age' => 19]]
      * @param string $headerColor 表头字体颜色，如 #333333
@@ -108,75 +123,84 @@ class SimpleExcel
      */
     public static function export(string $fileName = 'dump.xlsx', string $fileType = 'xlsx', array $headerColumn = [], array $exportData = [], string $headerColor = '#333333', string $headerBgColor = '#99bcac', string $borderColor = '#333333')
     {
-        // 实例化Spreadsheet对象
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        try {
+            // 实例化Spreadsheet对象
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
-        // 设置表头
-        $sheet = $spreadsheet->getActiveSheet();
-        $columnIndex = 1;
-        foreach ($headerColumn as $field => $displayName) {
-            $cell = Coordinate::stringFromColumnIndex($columnIndex) . 1;
-            $sheet->setCellValue($cell, $displayName);
-            $sheet->getStyle($cell)->applyFromArray([
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => [
-                        'rgb' => str_replace('#', '', $headerBgColor),
-                    ],
-                ],
-                'font' => [
-                    'bold'  => true,
-                    'color' => [
-                        'rgb' => str_replace('#', '', $headerColor),
-                    ],
-                ],
-            ]);
-            $columnIndex++;
-        }
-
-        // 设置数据
-        $rowIndex = 2;
-        foreach ($exportData as $rowData) {
+            // 设置表头
+            $sheet = $spreadsheet->getActiveSheet();
             $columnIndex = 1;
             foreach ($headerColumn as $field => $displayName) {
-                $cell = Coordinate::stringFromColumnIndex($columnIndex) . $rowIndex;
-                $sheet->setCellValue($cell, $rowData[$field]);
-
-                $sheet->getStyle($cell)->applyFromArray(
-                    [
-                        'borders' => [
-                            'allBorders' => [
-                                'borderStyle' => Border::BORDER_THIN,
-                                'color' => [
-                                    'rgb' => str_replace('#', '', $borderColor),
-                                ],
-                            ],
+                $cell = Coordinate::stringFromColumnIndex($columnIndex) . 1;
+                $sheet->setCellValue($cell, $displayName ?? '');
+                $sheet->getStyle($cell)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => [
+                            'rgb' => str_replace('#', '', $headerBgColor),
                         ],
-                    ]
-                );
-
+                    ],
+                    'font' => [
+                        'bold'  => true,
+                        'color' => [
+                            'rgb' => str_replace('#', '', $headerColor),
+                        ],
+                    ],
+                ]);
                 $columnIndex++;
             }
-            $rowIndex++;
-        }
+
+            // 设置数据
+            $rowIndex = 2;
+            foreach ($exportData as $rowData) {
+                $columnIndex = 1;
+                foreach ($headerColumn as $field => $displayName) {
+                    $cell = Coordinate::stringFromColumnIndex($columnIndex) . $rowIndex;
+                    $sheet->setCellValue($cell, $rowData[$field] ?? '');
+
+                    $sheet->getStyle($cell)->applyFromArray(
+                        [
+                            'borders' => [
+                                'allBorders' => [
+                                    'borderStyle' => Border::BORDER_THIN,
+                                    'color' => [
+                                        'rgb' => str_replace('#', '', $borderColor),
+                                    ],
+                                ],
+                            ],
+                        ]
+                    );
+
+                    $columnIndex++;
+                }
+                $rowIndex++;
+            }
 
 
-        // 宽度自适应
-        $columnIndex = 1;
-        foreach ($headerColumn as $field => $displayName) {
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($columnIndex))->setAutoSize(true);
-            $columnIndex++;
-        }
+            // 宽度自适应
+            $columnIndex = 1;
+            foreach ($headerColumn as $field => $displayName) {
+                $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($columnIndex))->setAutoSize(true);
+                $columnIndex++;
+            }
 
-        // 设置文件类型
-        if ($fileType === 'xls') {
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet);
-        } else if ($fileType === 'xlsx') {
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        } else if ($fileType === 'csv') {
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Csv($spreadsheet);
+            // 设置文件类型
+            if ($fileType === 'xls') {
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet);
+            } else if ($fileType === 'xlsx') {
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            } else if ($fileType === 'csv') {
+                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Csv($spreadsheet);
+            }
+            $writer->save($fileName);
+        } catch (\Exception $e) {
+            // 下载流报错时设置 http 响应头为 text/html， 便于排错
+            if ($fileName == 'php://output') {
+                header('text/html; charset=UTF-8');
+                header('Content-Disposition: inline');
+            }
+            throw $e;
         }
-        $writer->save($fileName);
     }
 
 
