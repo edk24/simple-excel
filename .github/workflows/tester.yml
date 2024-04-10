@@ -30,5 +30,8 @@ jobs:
           php-version: ${{ matrix.php-version }}
           extensions: openssl
           coverage: none
+      - name: No Framework
+        if: matrix.framework == 'default'
+        run: composer require hyperf/pimple
       - name: Run PHPUnit
         run: composer test
