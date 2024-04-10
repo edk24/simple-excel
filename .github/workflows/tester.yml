@@ -16,7 +16,6 @@ jobs:
         framework:
           - default
         php-version:
-          - 7.2
           - 7.3
           - 7.4
           - 8.0
@@ -31,8 +30,5 @@ jobs:
           php-version: ${{ matrix.php-version }}
           extensions: openssl
           coverage: none
-      - name: No Framework
-        if: matrix.framework == 'default'
-        run: composer require hyperf/pimple
       - name: Run PHPUnit
         run: composer test
