@@ -40,11 +40,12 @@ class SimpleExcel
      * @param string $filePath 文件所在路径， 例如：/tmp/test.xlsx
      * @param string $fileType 文件类型，支持xls、xlsx、csv 参考 SimpleExcel::FILE_
      * @param array $fieldArr 关联数组，key为excel表头，value为数据库字段， 如： ['姓名' => 'name', '年龄' => 'age']
+     * @param bool $ignoreEmptyRow 是否忽略空行, 默认忽略
      * @return array
      * @throws RuntimeException
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      */
-    public static function import(string $filePath = '', string $fileType = 'xlsx', array $fieldArr = [])
+    public static function import(string $filePath = '', string $fileType = 'xlsx', array $fieldArr = [], $ignoreEmptyRow = true)
     {
         if (!is_file($filePath)) {
             throw new \RuntimeException('文件不存在');
@@ -86,6 +87,11 @@ class SimpleExcel
                 $val = $currentSheet->getCell(Coordinate::stringFromColumnIndex($currentColumn) . $currentRow)->getValue();
                 $values[] = is_null($val) ? '' : $val;
             }
+            // 忽略空行
+            if ($ignoreEmptyRow && empty(array_filter($values))) {
+                continue;
+            }
+            // 生成数据
             $row = [];
             $temp = array_combine($fields, $values);
 

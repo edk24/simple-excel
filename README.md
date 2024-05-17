@@ -102,7 +102,11 @@ SimpleExcel::export('php://output', 'xlsx', [
 - ① 如果你是处理大数据，不要用这个库， 直接用 php 的 `fputcsv` 和 `fgetcsv`
 - ② 导出几百万上千万的数据，怎么打开？用 `UltraEdit` 即可，很🐂🍺的
 
+### 6. 空行忽略
 
+遇到空行数据默认是跳过的
+
+可以通过 simpleExcel::import() 函数的参数4 `ignoreEmptyRow` 设置
 
 ## 感谢 🙏
 
