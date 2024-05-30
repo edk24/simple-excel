@@ -3,3 +3,4 @@ vendor/
 .DS_Store
 export.xlsx
 *.cache
+100000row_and_100column.*

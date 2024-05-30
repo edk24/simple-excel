@@ -60,7 +60,8 @@ class SimpleExcel
         } else if ($fileType === 'xlsx') {
             $reader = new Xlsx();
         } else if ($fileType === 'csv') {
-            $reader = new Csv();
+            // $reader = new Csv();
+            return self::importFromCsv($filePath, $fieldArr, $ignoreEmptyRow);
         } 
 
         //加载文件
@@ -113,6 +114,33 @@ class SimpleExcel
     }
 
 
+    private static function importFromCsv(string $filePath, array $fieldArr = [], $ignoreEmptyRow = true)
+    {
+        $insertArr = [];
+        $fp = fopen($filePath, 'r');
+        $fields = fgetcsv($fp);
+        while ($row = fgetcsv($fp)) {
+            if ($ignoreEmptyRow && empty(array_filter($row))) {
+                continue;
+            }
+            $temp = array_combine($fields, $row);
+            $row = [];
+            if (is_array($temp)) {
+                foreach ($temp as $k => $v) {
+                    if (isset($fieldArr[$k]) && $k !== '') {
+                        $row[$fieldArr[$k]] = $v;
+                    }
+                }
+            }
+            if ($row) {
+                array_push($insertArr, $row);
+            }
+        }
+        fclose($fp);
+        return $insertArr;
+    }
+
+
     /**
      * 导出数据
      *
@@ -130,6 +158,11 @@ class SimpleExcel
     public static function export(string $fileName = 'dump.xlsx', string $fileType = 'xlsx', array $headerColumn = [], array $exportData = [], string $headerColor = '#333333', string $headerBgColor = '#99bcac', string $borderColor = '#333333')
     {
         try {
+            if ($fileType === 'csv') {
+                self::exportToCsv($fileName, $headerColumn, $exportData);
+                return;
+            }
+
             // 实例化Spreadsheet对象
             $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
@@ -163,7 +196,6 @@ class SimpleExcel
                 foreach ($headerColumn as $field => $displayName) {
                     $cell = Coordinate::stringFromColumnIndex($columnIndex) . $rowIndex;
                     $sheet->setCellValue($cell, $rowData[$field] ?? '');
-
                     $sheet->getStyle($cell)->applyFromArray(
                         [
                             'borders' => [
@@ -176,7 +208,6 @@ class SimpleExcel
                             ],
                         ]
                     );
-
                     $columnIndex++;
                 }
                 $rowIndex++;
@@ -209,6 +240,15 @@ class SimpleExcel
         }
     }
 
+    private static function exportToCsv(string $fileName, array $headerColumn, array $exportData)
+    {
+        $fp = fopen($fileName, 'w');
+        fputcsv($fp, array_values($headerColumn));
+        foreach ($exportData as $rowData) {
+            fputcsv($fp, array_values($rowData));
+        }
+        fclose($fp);
+    }
 
     /**
      * 设置下载头

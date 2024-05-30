@@ -4,6 +4,8 @@
 
 依赖：PhpSpreadsheet
 
+![示例](./docs/export.png)
+
 ## 使用 🎉
 
 要求 `php >= 7.3`
@@ -45,6 +47,13 @@ SimpleExcel::export('php://output', 'xlsx', [
     ['name' => '赵五', 'idcard' => '`522131199703213342', 'mobile' => '18311548011'],
 ],'#ff0000', '#00ff00', '#333333');
 ```
+
+#### 性能测试
+
+1. 此库的 `xls/xlsx` 基于的 `PhpSpreadsheet` 实现，且导出表格有着色处理。建议5w行100列以内的数据处理
+2. CSV单独做了优化处理, 100000行100列导入导出测试结果如下
+    - 导出消耗: `0.9 sec, 1.6 gb`
+    - 导入消耗: `3.92 sec, 1.6gb`
 
 ## 常见问题 ❓
 
@@ -99,8 +108,11 @@ SimpleExcel::export('php://output', 'xlsx', [
 
 > 使用 csv 替代 xlsx，`xls 最大行 65536，xlsx 最大行 1048576（一百万）`, csv 没有限制
 
-- ① 如果你是处理大数据，不要用这个库， 直接用 php 的 `fputcsv` 和 `fgetcsv`
-- ② 导出几百万上千万的数据，怎么打开？用 `UltraEdit` 即可，很🐂🍺的
+- ① 本库的 csv 做过优化，[100 000 rows and 100 columns测试](#性能测试) 基本足够大部分使用场景了
+- ② 如果你对内存和速度有更高的追求，我这边有几个推荐。
+  - 1. 直接用 php 的 `fputcsv` 和 `fgetcsv`，使用 chunk 分批查询（如果你的框架支持）
+  - 2. 使用 PHP 扩展 [xlswriter](https://xlswriter-docs.viest.me/zh-cn) [(感谢 @bugsnail @langziyang @QlanQ 推荐)](https://www.v2ex.com/t/1045263#reply5)
+- ③ 导出几百万上千万的数据，怎么打开？用 `UltraEdit` 即可，很🐂🍺的
 
 ### 6. 空行忽略
 
