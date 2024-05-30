@@ -10,6 +10,12 @@
 
 要求 `php >= 7.3`
 
+### 安装
+
+```shell
+$ composer require yuxiaobo/simple-excel
+```
+
 ### 导入
 
 ```php
