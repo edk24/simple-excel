@@ -258,7 +258,7 @@ class SimpleExcel
      */
     public static function setDownloadHeader(string $filename = '导出数据.xlsx')
     {
-        ob_end_clean(); // 这一步非常关键，用来清除缓冲区防止导出的excel乱码
+        if (ob_get_length()) ob_end_clean(); // 这一步非常关键，用来清除缓冲区防止导出的excel乱码
         header('pragma:public');
         header('Content-type:application/vnd.ms-excel;charset=utf-8;');
         header("Content-Disposition:attachment;filename=$filename");
