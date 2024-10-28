@@ -21,7 +21,7 @@ class SimpleExcel
     /**
      * 文件类型：xlsx
      */
-    const FILE_XLSX = 'xslx';
+    const FILE_XLSX = 'xlsx';
 
     /**
      * 文件类型：xls
@@ -228,6 +228,8 @@ class SimpleExcel
                 $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             } else if ($fileType === 'csv') {
                 $writer = new \PhpOffice\PhpSpreadsheet\Writer\Csv($spreadsheet);
+            } else {
+                throw new \Exception("不支持导出文件类型: $fileType");
             }
             $writer->save($fileName);
         } catch (\Exception $e) {
