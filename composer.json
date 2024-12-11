@@ -31,7 +31,7 @@
     },
     "require": {
         "php": "^7.3 || ^8",
-        "phpoffice/phpspreadsheet": "^1.23"
+        "phpoffice/phpspreadsheet": "^1.19"
     },
     "scripts": {
         "test": "./vendor/bin/phpunit -c phpunit.xml --colors=always"
