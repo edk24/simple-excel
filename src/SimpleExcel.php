@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace yuxiaobo\library;
 
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Reader\Csv;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Reader\Xls;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
@@ -170,8 +171,11 @@ class SimpleExcel
             $sheet = $spreadsheet->getActiveSheet();
             $columnIndex = 1;
             foreach ($headerColumn as $field => $displayName) {
-                $cell = Coordinate::stringFromColumnIndex($columnIndex) . 1;
+                $column = Coordinate::stringFromColumnIndex($columnIndex);
+                $cell = $column . 1;
                 $sheet->setCellValue($cell, $displayName ?? '');
+                // 自动列宽
+                $sheet->getColumnDimension($column)->setAutoSize(true);
                 $sheet->getStyle($cell)->applyFromArray([
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
@@ -195,9 +199,15 @@ class SimpleExcel
                 $columnIndex = 1;
                 foreach ($headerColumn as $field => $displayName) {
                     $cell = Coordinate::stringFromColumnIndex($columnIndex) . $rowIndex;
-                    $sheet->setCellValue($cell, $rowData[$field] ?? '');
+                    // 设置单元格数据, 强制字符串类型
+                    $sheet->setCellValueExplicit($cell, $rowData[$field] ?? '', DataType::TYPE_STRING);
                     $sheet->getStyle($cell)->applyFromArray(
                         [
+                            'alignment' => [
+                                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                                'vertical' => Alignment::VERTICAL_CENTER,
+                                'wrapText' => true,
+                            ],
                             'borders' => [
                                 'allBorders' => [
                                     'borderStyle' => Border::BORDER_THIN,

@@ -25,6 +25,11 @@ class ExcelTest extends TestCase
     }
 
 
+    /**
+     * 导出测试
+     * 
+     * @test
+     */
     public function testExport()
     {
         $filename = dirname(__DIR__) . '/export.xlsx';
@@ -37,15 +42,19 @@ class ExcelTest extends TestCase
             'idcard'    => '身份证',
             'mobile'    => '手机号'
         ], [
-            ['name' => '张三', 'idcard' => '`522131199703213342', 'mobile'=>'18311548011'],
-            ['name' => '李四', 'idcard' => '`522131199703213342', 'mobile' => '18311548011'],
-            ['name' => '赵五', 'idcard' => '`522131199703213342', 'mobile' => '18311548011'],
+            ['name' => '张三', 'idcard' => '522131199703213342', 'mobile' => '18311548011'],
+            ['name' => '李四', 'idcard' => '522131199703213342', 'mobile' => '18311548011'],
+            ['name' => '赵五', 'idcard' => '522131199703213342', 'mobile' => '18311548011'],
+            ['name' => '王二麻子', 'idcard' => "5221311997\n03213342", 'mobile' => '1831154801118311548011183115480111831154801118311548011'],
         ], '#ffffff', '#3573dd', '#333333');
 
         $this->assertTrue(file_exists($filename));
     }
-    
 
+
+    /**
+     * 导出10000行100列的CSV文件
+     */
     public function test100000row_and_100column_csv_writer()
     {
         // 内存限制
@@ -72,11 +81,14 @@ class ExcelTest extends TestCase
         $t = microtime(true);
         SimpleExcel::export($filename, 'csv', $header, $data);
         $t = microtime(true) - $t;
-        echo sprintf('CSV => 10000行100列导出: 耗时:%2.f', $t) . PHP_EOL;
+        fwrite(STDERR, sprintf('CSV => 100000行100列导出: 耗时:%2.f' . PHP_EOL, $t));
 
         $this->assertTrue(file_exists($filename));
     }
 
+    /**
+     * 导入10000行100列的CSV文件
+     */
     public function test100000row_and_100column_csv_reader()
     {
         // 内存限制
@@ -94,7 +106,7 @@ class ExcelTest extends TestCase
         $t = microtime(true);
         $data = SimpleExcel::import($filename, 'csv', $header);
         $t = microtime(true) - $t;
-        echo sprintf('CSV => 100000行100列导入: 耗时:%2.f', $t) . PHP_EOL;
+        fwrite(STDERR, sprintf('CSV => 100000行100列导入: 耗时:%2.f' . PHP_EOL, $t));
 
         $this->assertIsArray($data);
     }
