@@ -177,6 +177,11 @@ class SimpleExcel
                 // 自动列宽
                 $sheet->getColumnDimension($column)->setAutoSize(true);
                 $sheet->getStyle($cell)->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
                         'startColor' => [
