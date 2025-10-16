@@ -118,6 +118,26 @@ SimpleExcel::export('php://output', 'xlsx', [
 
 可以通过 simpleExcel::import() 函数的参数4 `ignoreEmptyRow` 设置
 
+**7. 导入遇日期时间为小数问题**
+
+自行通过 `\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject(0.375)->format('Y-m-d H:i:s')` 转换即可;
+
+在 Excel 中，日期时间是一个小数，例如 `09:00:00` 对应的小数为 `0.375`;
+
+- `09:00` 9 = 9/24 = 0.375
+- `12:30` (12 + 30/60) = 12.5 = 12.5/24 = 0.5208333333333334
+
+```php
+# php简单实现 (备用方案)
+function excelTimeToTimeStringSimple(int $excelTime) {
+    // Excel的基准日期是1900-01-00，加上天数得到时间戳
+    // 86400 = 24 * 60 * 60 (一天的秒数)
+    $timestamp = $excelTime * 86400;
+    return gmdate("H:i:s", (int)round($timestamp));
+}
+// excelTimeToTimeStringSimple(0.375) => 09:00:00
+```
+
 ## 💡意见反馈
 
 如果您在使用过程中遇到了问题，请先反馈 issue

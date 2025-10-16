@@ -18,7 +18,8 @@ class ExcelTest extends TestCase
         $arr = SimpleExcel::import(dirname(__DIR__) . '/test/test.xlsx', 'xlsx', array(
             '姓名'      => 'name',
             '年龄'      => 'age',
-            '性别'      => 'gender'
+            '性别'      => 'gender',
+            '时间'      => 'time'
         ));
 
         $this->assertIsArray($arr);
