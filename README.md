@@ -8,7 +8,7 @@
 
 环境要求
 - PHP >= 7.3
-- PhpSpreadsheet >= 1.23
+- PhpSpreadsheet >= 1.19
 
 安装
 
@@ -56,12 +56,17 @@ SimpleExcel::export('php://output', 'xlsx', [
 ],'#ff0000', '#00ff00', '#333333');
 ```
 
+> 注意：当 `fileName` 为 `php://output` 且导出过程发生异常时，库会自动切换为 `text/html` 并输出友好的错误页面，不再继续下载 xlsx。  
+> 如果导出到本地文件路径（如 `/tmp/demo.xlsx`），异常仍会继续抛出。
+
 性能测试
 
 1. 此库的 `xls/xlsx` 基于的 `PhpSpreadsheet` 实现，且导出表格有着色处理。建议5w行100列以内的数据处理
 2. CSV单独做了优化处理, 100000行100列导入导出测试结果如下
     - export: `0.9 sec, 1.6 gb`
     - import: `3.92 sec, 1.6gb`
+
+默认单元测试会跳过上述压测用例，如需执行可使用：`./vendor/bin/phpunit -c phpunit.xml --group performance`
 
 ## ✅️ 常见问题
 

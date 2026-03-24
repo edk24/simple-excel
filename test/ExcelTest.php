@@ -3,6 +3,7 @@
 namespace simpleExcel\test;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use yuxiaobo\library\SimpleExcel;
 
 class ExcelTest extends TestCase
@@ -55,6 +56,8 @@ class ExcelTest extends TestCase
 
     /**
      * 导出10000行100列的CSV文件
+     *
+     * @group performance
      */
     public function test100000row_and_100column_csv_writer()
     {
@@ -89,6 +92,8 @@ class ExcelTest extends TestCase
 
     /**
      * 导入10000行100列的CSV文件
+     *
+     * @group performance
      */
     public function test100000row_and_100column_csv_reader()
     {
@@ -110,5 +115,138 @@ class ExcelTest extends TestCase
         fwrite(STDERR, sprintf('CSV => 100000行100列导入: 耗时:%2.f' . PHP_EOL, $t));
 
         $this->assertIsArray($data);
+    }
+
+    /**
+     * @test
+     */
+    public function testCsvExportShouldRespectHeaderOrder()
+    {
+        $filename = tempnam(sys_get_temp_dir(), 'simple_excel_csv_');
+        if ($filename === false) {
+            $this->fail('无法创建临时文件');
+        }
+
+        $header = [
+            'name' => '姓名',
+            'idcard' => '身份证',
+            'mobile' => '手机号',
+        ];
+
+        $rows = [
+            [
+                'mobile' => '18300000000',
+                'name' => '张三',
+                'idcard' => '522131199703213342',
+            ],
+        ];
+
+        try {
+            SimpleExcel::export($filename, 'csv', $header, $rows);
+
+            $fp = fopen($filename, 'r');
+            if ($fp === false) {
+                $this->fail('无法读取临时文件');
+            }
+
+            $csvHeader = fgetcsv($fp, 0, ',', '"', '\\');
+            $csvRow = fgetcsv($fp, 0, ',', '"', '\\');
+            fclose($fp);
+
+            $this->assertSame(['姓名', '身份证', '手机号'], $csvHeader);
+            $this->assertSame(['张三', '522131199703213342', '18300000000'], $csvRow);
+        } finally {
+            @unlink($filename);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function testCsvImportShouldFailWhenFileIsEmpty()
+    {
+        $filename = tempnam(sys_get_temp_dir(), 'simple_excel_csv_');
+        if ($filename === false) {
+            $this->fail('无法创建临时文件');
+        }
+
+        file_put_contents($filename, '');
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('CSV 文件为空或格式错误');
+            SimpleExcel::import($filename, 'csv', ['姓名' => 'name']);
+        } finally {
+            @unlink($filename);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function testCsvImportShouldPadShortRows()
+    {
+        $filename = tempnam(sys_get_temp_dir(), 'simple_excel_csv_');
+        if ($filename === false) {
+            $this->fail('无法创建临时文件');
+        }
+
+        $csv = <<<CSV
+姓名,年龄,性别
+张三,18
+李四,19,男
+CSV;
+
+        file_put_contents($filename, $csv);
+
+        try {
+            $data = SimpleExcel::import($filename, 'csv', [
+                '姓名' => 'name',
+                '年龄' => 'age',
+                '性别' => 'gender',
+            ]);
+
+            $this->assertSame([
+                ['name' => '张三', 'age' => '18', 'gender' => ''],
+                ['name' => '李四', 'age' => '19', 'gender' => '男'],
+            ], $data);
+        } finally {
+            @unlink($filename);
+        }
+    }
+
+    /**
+     * @test
+     * @runInSeparateProcess
+     */
+    public function testExportToPhpOutputShouldRenderHtmlWhenExceptionOccurred()
+    {
+        ob_start();
+        SimpleExcel::setDownloadHeader('导出数据.xlsx');
+        SimpleExcel::export('php://output', 'invalid_type', [
+            'name' => '姓名',
+        ], [
+            ['name' => '张三'],
+        ]);
+        $output = (string)ob_get_clean();
+
+        $this->assertStringContainsString('<!DOCTYPE html>', $output);
+        $this->assertStringContainsString('导出失败', $output);
+        $this->assertStringContainsString('不支持导出文件类型', $output);
+    }
+
+    /**
+     * @test
+     */
+    public function testExportToFileShouldStillThrowWhenExceptionOccurred()
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('不支持导出文件类型');
+
+        SimpleExcel::export(dirname(__DIR__) . '/export.invalid.xlsx', 'invalid_type', [
+            'name' => '姓名',
+        ], [
+            ['name' => '张三'],
+        ]);
     }
 }

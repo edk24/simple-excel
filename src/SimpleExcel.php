@@ -20,6 +20,11 @@ use RuntimeException;
 class SimpleExcel
 {
     /**
+     * CSV escape char
+     */
+    const CSV_ESCAPE = '\\';
+
+    /**
      * 文件类型：xlsx
      */
     const FILE_XLSX = 'xlsx';
@@ -49,21 +54,20 @@ class SimpleExcel
     public static function import(string $filePath = '', string $fileType = 'xlsx', array $fieldArr = [], $ignoreEmptyRow = true)
     {
         if (!is_file($filePath)) {
-            throw new \RuntimeException('文件不存在');
+            throw new RuntimeException('文件不存在');
         }
 
         // 实例化reader
-        if (!in_array($fileType, ['xls', 'xlsx', 'csv'])) {
-            throw new \RuntimeException('不支持的格式');
+        if (!in_array($fileType, [self::FILE_XLS, self::FILE_XLSX, self::FILE_CSV], true)) {
+            throw new RuntimeException('不支持的格式');
         }
-        if ($fileType === 'xls') {
+        if ($fileType === self::FILE_XLS) {
             $reader = new Xls();
-        } else if ($fileType === 'xlsx') {
+        } elseif ($fileType === self::FILE_XLSX) {
             $reader = new Xlsx();
-        } else if ($fileType === 'csv') {
-            // $reader = new Csv();
+        } elseif ($fileType === self::FILE_CSV) {
             return self::importFromCsv($filePath, $fieldArr, $ignoreEmptyRow);
-        } 
+        }
 
         //加载文件
         $insertArr = [];
@@ -119,12 +123,31 @@ class SimpleExcel
     {
         $insertArr = [];
         $fp = fopen($filePath, 'r');
-        $fields = fgetcsv($fp);
-        while ($row = fgetcsv($fp)) {
-            if ($ignoreEmptyRow && empty(array_filter($row))) {
+        if ($fp === false) {
+            throw new RuntimeException('CSV 文件无法读取');
+        }
+
+        $fields = fgetcsv($fp, 0, ',', '"', self::CSV_ESCAPE);
+        if (!is_array($fields) || $fields === []) {
+            fclose($fp);
+            throw new RuntimeException('CSV 文件为空或格式错误');
+        }
+
+        $fieldCount = count($fields);
+
+        while (($rawRow = fgetcsv($fp, 0, ',', '"', self::CSV_ESCAPE)) !== false) {
+            if ($ignoreEmptyRow && empty(array_filter($rawRow))) {
                 continue;
             }
-            $temp = array_combine($fields, $row);
+
+            $rowCount = count($rawRow);
+            if ($rowCount < $fieldCount) {
+                $rawRow = array_pad($rawRow, $fieldCount, '');
+            } elseif ($rowCount > $fieldCount) {
+                $rawRow = array_slice($rawRow, 0, $fieldCount);
+            }
+
+            $temp = array_combine($fields, $rawRow);
             $row = [];
             if (is_array($temp)) {
                 foreach ($temp as $k => $v) {
@@ -133,10 +156,12 @@ class SimpleExcel
                     }
                 }
             }
+
             if ($row) {
                 array_push($insertArr, $row);
             }
         }
+
         fclose($fp);
         return $insertArr;
     }
@@ -159,7 +184,7 @@ class SimpleExcel
     public static function export(string $fileName = 'dump.xlsx', string $fileType = 'xlsx', array $headerColumn = [], array $exportData = [], string $headerColor = '#333333', string $headerBgColor = '#99bcac', string $borderColor = '#333333')
     {
         try {
-            if ($fileType === 'csv') {
+            if ($fileType === self::FILE_CSV) {
                 self::exportToCsv($fileName, $headerColumn, $exportData);
                 return;
             }
@@ -237,21 +262,28 @@ class SimpleExcel
             }
 
             // 设置文件类型
-            if ($fileType === 'xls') {
+            if ($fileType === self::FILE_XLS) {
                 $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet);
-            } else if ($fileType === 'xlsx') {
+            } elseif ($fileType === self::FILE_XLSX) {
                 $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            } else if ($fileType === 'csv') {
-                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Csv($spreadsheet);
             } else {
-                throw new \Exception("不支持导出文件类型: $fileType");
+                throw new RuntimeException("不支持导出文件类型: $fileType");
             }
             $writer->save($fileName);
-        } catch (\Exception $e) {
-            // 下载流报错时设置 http 响应头为 text/html， 便于排错
-            if ($fileName == 'php://output') {
-                header('text/html; charset=UTF-8');
+        } catch (\Throwable $e) {
+            // 下载流报错时输出 html，避免页面崩溃
+            if ($fileName === 'php://output') {
+                if (ob_get_level() > 0) {
+                    @ob_clean();
+                }
+
+                if (function_exists('http_response_code')) {
+                    http_response_code(500);
+                }
+                header('Content-Type:text/html; charset=UTF-8');
                 header('Content-Disposition: inline');
+                self::renderExportErrorHtml($e);
+                return;
             }
             throw $e;
         }
@@ -260,11 +292,44 @@ class SimpleExcel
     private static function exportToCsv(string $fileName, array $headerColumn, array $exportData)
     {
         $fp = fopen($fileName, 'w');
-        fputcsv($fp, array_values($headerColumn));
-        foreach ($exportData as $rowData) {
-            fputcsv($fp, array_values($rowData));
+        if ($fp === false) {
+            throw new RuntimeException('CSV 文件无法写入');
         }
+
+        fputcsv($fp, array_values($headerColumn), ',', '"', self::CSV_ESCAPE);
+        $fieldKeys = array_keys($headerColumn);
+
+        foreach ($exportData as $rowData) {
+            $orderedRow = [];
+            foreach ($fieldKeys as $fieldKey) {
+                $orderedRow[] = $rowData[$fieldKey] ?? '';
+            }
+            fputcsv($fp, $orderedRow, ',', '"', self::CSV_ESCAPE);
+        }
+
         fclose($fp);
+    }
+
+    private static function renderExportErrorHtml(\Throwable $e): void
+    {
+        $message = htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        echo <<<HTML
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出失败</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #f5f7fa;">
+    <div style="max-width: 720px; margin: 48px auto; padding: 24px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <h2 style="margin: 0 0 12px; color: #111827;">导出失败</h2>
+        <p style="margin: 0 0 8px; color: #374151;">文件下载已中止，请稍后重试或联系管理员。</p>
+        <p style="margin: 0; color: #b91c1c;">错误信息：{$message}</p>
+    </div>
+</body>
+</html>
+HTML;
     }
 
     /**
@@ -277,7 +342,17 @@ class SimpleExcel
     {
         if (ob_get_length()) ob_end_clean(); // 这一步非常关键，用来清除缓冲区防止导出的excel乱码
         header('pragma:public');
-        header('Content-type:application/vnd.ms-excel;charset=utf-8;');
-        header("Content-Disposition:attachment;filename=$filename");
+        $type = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if ($type === self::FILE_CSV) {
+            header('Content-Type:text/csv;charset=utf-8;');
+        } elseif ($type === self::FILE_XLSX) {
+            header('Content-Type:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;');
+        } else {
+            header('Content-Type:application/vnd.ms-excel;charset=utf-8;');
+        }
+
+        $safeFilename = str_replace(['"', "\r", "\n"], '', $filename);
+        $encodedFilename = rawurlencode($safeFilename);
+        header("Content-Disposition:attachment; filename=\"{$safeFilename}\"; filename*=UTF-8''{$encodedFilename}");
     }
 }
