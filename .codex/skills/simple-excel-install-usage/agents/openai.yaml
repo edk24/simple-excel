@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simple Excel Install & Usage"
+  short_description: "Install and use yuxiaobo/simple-excel in PHP projects"
+  default_prompt: "Use $simple-excel-install-usage to install and integrate yuxiaobo/simple-excel with import/export examples."
