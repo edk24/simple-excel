@@ -7,8 +7,18 @@
 ## 🎉 使用方法
 
 环境要求
-- PHP >= 7.3
-- PhpSpreadsheet >= 1.19
+- PHP >= 7.4
+- PhpSpreadsheet >= 1.30.3（Composer 会按 PHP 版本自动选择 1.30.x / 2.1.15 / 2.4.4+ / 3.x / 4.x / 5.x）
+- **安全建议：PHP 8.3.36+ / 8.4.27+ / 8.5.12+ / 8.2.35+**（已修复 CVE-2026-109618、CVE-2026-109619）
+
+### PHP / PhpSpreadsheet 兼容矩阵
+
+| PHP 版本 | 可用 PhpSpreadsheet 分支 | 说明 |
+| --- | --- | --- |
+| 7.4 – 8.4 | 1.30.3 – 1.30.7 | 兼容旧项目，仅支持 PHP < 8.5 |
+| 8.0 – 8.4 | 2.1.15（2.1.x） | 旧版 2.x 分支，2.2/2.3 已排除 |
+| 8.1 – 8.5 | 2.4.4+ / 3.x / 4.x / 5.x | 推荐，PHP 8.5 建议 5.x |
+| 8.2.35+ / 8.3.36+ / 8.4.27+ / 8.5.12+ | 以上任意分支 | 已包含两个 CVE 的官方修复 |
 
 安装
 
@@ -26,6 +36,27 @@ $arr = SimpleExcel::import(dirname(__DIR__) . '/test/test.xlsx', 'xlsx', array(
 ));
 var_dump($arr);
 ```
+
+不可信上传场景建议限制文件大小、行数、列数，并只读取数据：
+
+```php
+$arr = SimpleExcel::import($uploadedFile, 'xlsx', [
+    '姓名' => 'name',
+    '年龄' => 'age',
+], true, [
+    'maxFileSize' => 20 * 1024 * 1024, // 20MB
+    'maxRows'     => 100000,
+    'maxColumns'  => 100,
+    'maxCells'    => 5000000,
+    'readDataOnly' => true,             // 降低内存占用
+    'assertSecureRuntime' => true,      // 确认已升级到 8.3.36+ 再开启；否则会直接拒绝处理
+]);
+```
+
+> `maxFileSize` / `maxRows` / `maxColumns` / `maxCells` 传 `0` 表示不限制。
+> `xls/xlsx` 默认已按 Excel 硬限制兜底（1048576 行、16384 列、10000000 单元格）；`csv` 默认不限制行/列，避免破坏既有用法。
+>
+> 安全提示：不要直接把用户可控的 `$filePath` 传给本库；请使用上传后的临时文件路径，并在业务层校验文件来源、类型和大小。
 
 导出到文件
 
@@ -58,6 +89,63 @@ SimpleExcel::export('php://output', 'xlsx', [
 
 > 注意：当 `fileName` 为 `php://output` 且导出过程发生异常时，库会自动切换为 `text/html` 并输出友好的错误页面，不再继续下载 xlsx。  
 > 如果导出到本地文件路径（如 `/tmp/demo.xlsx`），异常仍会继续抛出。
+
+## 🔐 PHP 8.3.36 与 CVE-2026-109618 / CVE-2026-109619
+
+这两个 CVE 属于 **PHP 解释器本身**，不是本包或 PhpSpreadsheet 的漏洞，无法通过 Composer 升级本包修复。
+
+- `CVE-2026-109618`：OOM 处理路径中的内存破坏（use-after-free），可导致未认证 RCE。
+- `CVE-2026-109619`：请求结束后 worker 全局状态未正确重置，后续请求可消费 stale 状态，可导致未认证 RCE。
+
+官方修复版本：**PHP 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12**。升级后必须重启所有 PHP-FPM / Apache worker。
+
+**完整修复只能升级 PHP 运行时。** 本包在代码层做了以下降低触发概率的加固：
+
+1. 新增 `RuntimeSecurity`，可检测当前 PHP 是否受影响，并给出对应分支的修复版本与官方缓解措施。
+2. `import()` 支持文件大小、行数、列数、单元格数限制；`xls/xlsx` 默认按 Excel 硬限制兜底（并限制 10000000 单元格，防止稀疏大坐标文件拖垮进程）。
+3. 解析器异常统一收敛为 `RuntimeException`，并在 `finally` 中释放 Spreadsheet 资源，减少 OOM / 未捕获 fatal error 路径。
+4. CSV 统一使用 RFC 4180（`escape=''`），不再触发 PHP 8.4+ 对非空 `$escape` 的 deprecation，避免产生可被 CVE-2026-109619 利用的 warning/deprecation 状态。
+5. 下载响应头、输出缓冲区、错误页均做了 warning/异常收敛。
+
+巡检与 fail-closed 示例：
+
+```php
+use yuxiaobo\library\RuntimeSecurity;
+
+$status = RuntimeSecurity::status();
+if ($status['affected']) {
+    // 记录告警，推动运维升级 PHP
+    error_log($status['message']);
+    // 可选：不可信上传入口直接拒绝
+    // RuntimeSecurity::assertSecure();
+}
+
+// 查看官方缓解措施
+print_r($status['mitigations']);
+```
+
+> 也可以用 `SimpleExcel::import(..., ['assertSecureRuntime' => true])` 在单次导入时 fail-closed。
+>
+> 注意：`assertSecureRuntime` 会导致受影响的 PHP 直接无法导入，请先评估升级窗口，不要在全部流量上贸然开启。
+>
+> 更多细节与漏洞报告方式见 [SECURITY.md](SECURITY.md)。
+
+## 🧩 CSV 转义说明（BC 变更）
+
+从 `dev-main` 起，`SimpleExcel::CSV_ESCAPE` 改为空字符串，`fgetcsv` / `fputcsv` 使用 RFC 4180 标准转义：
+
+- 双引号内的逗号、换行、双引号（`""`）均可正确往返；
+- 不再使用 PHP 私有的反斜杠转义；
+- 在 PHP 7.4 – 8.5 行为一致，且不会触发 PHP 8.4+ deprecation。
+
+如果历史 CSV 依赖 `\"` 这种反斜杠转义，请优先转换数据；确需兼容时可在第 5 个参数（导入）或第 8 个参数（导出）中设置 `csvEscape`：
+
+```php
+SimpleExcel::import($file, 'csv', $map, true, ['csvEscape' => '\\']);
+SimpleExcel::export($file, 'csv', $header, $rows, '#333333', '#99bcac', '#333333', ['csvEscape' => '\\']);
+```
+
+> 注意：PHP 8.4+ 仍会对非空 `$escape` 发出 deprecation，建议只作为临时迁移手段。
 
 性能测试
 

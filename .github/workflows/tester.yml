@@ -10,26 +10,62 @@ jobs:
     name: ${{ matrix.os }}-php${{ matrix.php-version }}
     runs-on: "${{ matrix.os }}"
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
         php-version:
-          - 7.3
           - 7.4
           - 8.0
           - 8.1
+          - 8.2
           - 8.3
           - 8.4
+          - 8.5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
       - name: PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: openssl, dom, gd, mbstring, simplexml, xml, xmlreader, xmlwriter, zip
+          extensions: ctype, dom, fileinfo, filter, gd, iconv, libxml, mbstring, openssl, simplexml, xml, xmlreader, xmlwriter, zip, zlib
           coverage: none
+
       - name: Install Dependencies
         run: composer update --no-interaction --prefer-dist
+
+      - name: Audit Runtime Dependencies
+        run: composer audit --no-interaction --no-dev
+
+      - name: Lint
+        run: |
+          php -l src/SimpleExcel.php
+          php -l src/RuntimeSecurity.php
+          php -l test/smoke.php
+
+      - name: Run PHPUnit
+        run: composer test
+
+      - name: Run Compatibility Smoke Test
+        run: composer test:smoke
+
+  LowestDependencies:
+    name: lowest-dependencies-php8.3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: ctype, dom, fileinfo, filter, gd, iconv, libxml, mbstring, openssl, simplexml, xml, xmlreader, xmlwriter, zip, zlib
+          coverage: none
+
+      - name: Install Lowest Dependencies
+        run: composer update --no-interaction --prefer-dist --prefer-lowest
+
       - name: Run PHPUnit
         run: composer test

@@ -30,10 +30,11 @@
         "phpunit/phpunit": "^9.6"
     },
     "require": {
-        "php": "^7.3 || ^8",
-        "phpoffice/phpspreadsheet": "^1.19"
+        "php": "^7.4 || ^8.0",
+        "phpoffice/phpspreadsheet": "^1.30.3 || >=2.1.15 <2.2.0 || >=2.4.4 <3.0 || ^3.0 || ^4.0 || ^5.0"
     },
     "scripts": {
-        "test": "./vendor/bin/phpunit -c phpunit.xml --colors=always"
+        "test": "./vendor/bin/phpunit -c phpunit.xml --colors=always",
+        "test:smoke": "php test/smoke.php"
     }
 }

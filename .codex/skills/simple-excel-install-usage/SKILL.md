@@ -20,7 +20,9 @@ Keep output production-ready by mapping fields explicitly and using the library'
 
 ## Prerequisites
 
-- PHP `>= 7.3`
+- PHP `>= 7.4`
+- PhpSpreadsheet `>= 1.30.3` (Composer resolves the branch for the PHP version; 5.x recommended on PHP 8.2+)
+- For untrusted uploads, prefer PHP `8.3.36+`, `8.4.27+`, `8.5.12+`, or `8.2.35+` (fixes CVE-2026-109618 and CVE-2026-109619 in the PHP runtime)
 - Composer available in environment
 - Project uses autoload from Composer (`vendor/autoload.php`)
 
@@ -36,6 +38,7 @@ Use class:
 
 ```php
 use yuxiaobo\library\SimpleExcel;
+use yuxiaobo\library\RuntimeSecurity;
 ```
 
 ## API Usage
@@ -51,7 +54,15 @@ $rows = SimpleExcel::import(
         '年龄' => 'age',
         '性别' => 'gender',
     ],
-    true // ignoreEmptyRow
+    true, // ignoreEmptyRow
+    [
+        'maxFileSize' => 20 * 1024 * 1024,
+        'maxRows' => 100000,
+        'maxColumns' => 100,
+        'maxCells' => 5000000,
+        'readDataOnly' => true,
+        'assertSecureRuntime' => false, // set true to fail closed on CVE-affected PHP
+    ]
 );
 ```
 
@@ -59,6 +70,7 @@ Rules:
 - Always pass a field map (`Excel header => target key`) to avoid implicit column coupling.
 - Use `fileType` as one of: `xls`, `xlsx`, `csv`.
 - For Excel time serial values, convert with `\PhpOffice\PhpSpreadsheet\Shared\Date`.
+- For untrusted uploads, always set `maxFileSize`, `maxRows`, and `maxColumns`; use `RuntimeSecurity::isAffected()` to surface runtime upgrade warnings.
 
 ### Export to file
 
@@ -113,6 +125,12 @@ Behavior note:
 - Call `SimpleExcel::setDownloadHeader(...)` before `export('php://output', ...)`.
 - Ensure no debug output/echo before sending headers.
 
+5. PHP runtime CVE-2026-109618 / CVE-2026-109619
+- These are PHP interpreter vulnerabilities; no Composer update of this package fixes them.
+- Upgrade PHP to `8.2.35`, `8.3.36`, `8.4.27`, `8.5.12`, or newer and restart all FPM/Apache workers.
+- Use `RuntimeSecurity::status()` / `RuntimeSecurity::assertSecure()` to detect and optionally fail closed.
+- Do not rely on `memory_limit` alone; cap upload size and import row/column limits.
+
 ## Response Template
 
 When user asks for installation + usage, return:
@@ -120,3 +138,4 @@ When user asks for installation + usage, return:
 2. Minimal import/export code snippet matching their format (`xls/xlsx/csv`)
 3. Download-mode snippet if requested for web
 4. One short "common pitfalls" section tied to their scenario
+5. For upload/import flows, one sentence about PHP runtime CVE fixed versions and import limits
